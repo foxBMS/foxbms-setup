@@ -124,8 +124,8 @@ CHKSUM_SCRIPT_REL_PATH = os.path.join("foxBMS-tools", "checksum", "chksum.py")
 CHKSUM_INI_FILE_REL_PATH = os.path.join("foxBMS-tools", "checksum", "chksum.ini")
 STYLEGUIDE_SCRIPT_REL_PATH = os.path.join("foxBMS-tools", "styleguide", "checkall.py")
 
-SPHINX_DOC_DIR = os.path.join("foxBMS-documentation", "sphinx")
-DOXYGEN_DOC_DIR = os.path.join("foxBMS-documentation", "doxygen")
+SPHINX_DOC_DIR = os.path.join("foxBMS-documentation", "doc", "sphinx")
+DOXYGEN_DOC_DIR = os.path.join("foxBMS-documentation", "doc", "doxygen")
 
 
 def options(opt):
