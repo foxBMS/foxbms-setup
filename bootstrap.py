@@ -90,19 +90,12 @@ def clone_or_pull_repo(repo_name, repo_path):
     if os.path.isdir(repo_name):
         logging.info("Pulling foxBMS repository \"%s\" from remote %s" % (repo_name, repo_path))
         cmd = "git pull"
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
-            stderr=subprocess.PIPE, cwd=repo_name, shell=True)
-        out, err = proc.communicate()
+        subprocess.call(cmd, cwd=repo_name, shell=True)
     else:
         logging.info(" Cloning foxBMS repository \"%s\" from remote %s" % (repo_name, repo_path))
         cmd = "git clone %s" % (repo_path)
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
-            stderr=subprocess.PIPE, shell=True)
-        out, err = proc.communicate()
-    if out:
-        logging.info(out)
-    if err:
-        logging.info(err)
+        print repo_name
+        subprocess.call(cmd, shell=True)
 
 def setup_repo_class(repo_names, repo_paths, setup_info):
     """Helper function for nicer output while cloning/pulling the repositories
