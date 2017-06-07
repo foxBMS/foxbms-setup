@@ -4,27 +4,61 @@ foxBMS is a free, open and flexible development environment for the design of
 battery management systems. It is the first universal BMS development
 environment.
 
+# foxBMS
+
 ## foxBMS Project Setup
 The general setup files for the foxBMS project are found in the foxBMS-setup
 repository (https://github.com/foxBMS/foxBMS-setup). It includes a setup script
 (bootstrap.py) which clone all needed repositories. After cloning the
 repositories all needed documentation will be generated  automatically. The
-documentation is found in directory ./build. There is a help available by
-"python bootstrap.py -h"
+documentation is found in directory ./build. 
+After the bootstrap step the top project directory (foxBMS-setup) structure 
+looks like this:
+
+ - foxBMS-setup <dir>
+  - .git <dir> *
+  - build <dir>
+  - foxBMS-documentation <dir>
+  - foxBMS-hardware <dir>
+  - foxBMS-primary <dir>
+  - foxBMS-secondary <dir>
+  - foxBMS-tools <dir>
+  - FreeRTOS <dir>
+  - hal <dir>
+  - .gitignore <file> *
+  - bootstrap.py <file>
+  - build.py <file>
+  - CHANGELOG.md <file>
+  - clean.py <file>
+  - LICENSE.md <file>
+  - README.md <file>
+  - wscript <file>
+
+* Directories and files with starting full stop are hidden in Windows in default
+configuration. 
+
+There is a help available by "python bootstrap.py -h".
+
+## foxBMS Repositories
 
 The general documentation files for the foxBMS project are found in the
 foxBMS-documentation repository
 (https://github.com/foxBMS/foxBMS-documentation). The sphinx documentation is
-found in foxBMS-documentation/doc/sphinx while the doxygen documentation
-configuration is found in foxBMS-documentation/doc/doxygen. The doxygen
+found in foxBMS-documentation/doc/sphinx while the Doxygen documentation
+configuration is found in foxBMS-documentation/doc/doxygen. The Doxygen
 documentation itself is found in the software sources of the primary and
-secondary microcontroller.
+secondary microcontroller. The general documentation, rendered from the sphinx
+sources is found in ./build/sphinx/foxBMS-documentation/doc/sphinx/html. The
+main file is index.html
 
 foxBMS is made out of two Microcontroller Units (MCU), named primary and
 secondary. The C code for the primary MCU is found in the repository
 foxBMS-primary (https://github.com/foxBMS/foxBMS-primary). The C code for the
 secondary MCU is found in the repository foxBMS-secondary
-(https://github.com/foxBMS/foxBMS-secondary).
+(https://github.com/foxBMS/foxBMS-secondary). The Doxygen documentation is
+generated from these sources into ./build/primary/doxygen/html and
+./build/secondary/doxygen/html respectively. The main file is in both cases
+index.html.
 
 The layout and schematic files for the foxBMS hardware are found in the
 foxBMS-hardware repository (https://github.com/foxBMS/foxBMS-hardware).
@@ -47,9 +81,9 @@ foxBMS hardware, how to install the foxConda environment and how to use foxConda
 to compile and flash the sources.
 
 ## Building the Sources
-For building the software open a shell and type "python build.py -h". All 
-available build options will be displayed.
+For building the software open a shell and type "python build.py -h". All
+available build options will be displayed. The top build directory is ./build.
 
 ## Cleaning the ./build-Directory
-For cleaning instructions open a shell and type "python clean.py -h". All 
+For cleaning instructions open a shell and type "python clean.py -h". All
 available cleaning options will be displayed.
