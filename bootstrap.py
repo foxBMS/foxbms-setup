@@ -94,7 +94,8 @@ def clone_or_pull_repo(repo_name, repo_path):
     else:
         logging.info(" Cloning foxBMS repository \"%s\" from remote %s" % (repo_name, repo_path))
         cmd = "git clone %s" % (repo_path)
-        subprocess.call(cmd, cwd=repo_name, shell=True)
+        print repo_name
+        subprocess.call(cmd, shell=True)
 
 def setup_repo_class(repo_names, repo_paths, setup_info):
     """Helper function for nicer output while cloning/pulling the repositories
