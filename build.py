@@ -14,7 +14,14 @@ TOOLCHAIN_GCC_CHECK = "--check-c-compiler=gcc"
 
 def build_process(cmd, supress_output=False):
     logging.debug(cmd)
-    proc = subprocess.call(cmd, shell=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
+        stderr=subprocess.PIPE, shell=True)
+    out, err = proc.communicate()
+    if supress_output is False:
+        if out:
+            logging.info(out)
+        if err:
+            logging.error(err)
 
 def build(mcu_switch=None, doxygen=False, supress_output=False):
     cmd = TOOLCHAIN_BASIC_CONFIGURE +  " "
