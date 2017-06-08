@@ -448,6 +448,7 @@ def chksum_function(conf):
     proc_chksum = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
         stderr=subprocess.PIPE, shell=True)
     std_out, std_err = proc_chksum.communicate()
+    print 'stdout: {0}\nstderr: {1}'.format(std_out, std_err)
     checksum = (((std_out.split('* 32-bit SW-Chksum:     ')[1]).split('*'))[0].strip())
     print 'checksum output:\n----------------\n', std_out
     print 'Err:', std_err, '\n'
