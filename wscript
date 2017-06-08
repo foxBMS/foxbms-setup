@@ -189,7 +189,7 @@ def configure(conf):
         conf.find_program(pref + '-size', var='SIZE')
         conf.find_program('python', var='PYTHON')
         conf.find_program('dot', var='dot')
-    conf.env.CFLAGS = '-mcpu=cortex-m4 -mthumb -mlittle-endian -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -fmessage-length=0 -fno-common -fsigned-char -ffunction-sections -fdata-sections -ffreestanding -fno-move-loop-invariants -Wall -std=c99'.split(' ')
+    conf.env.CFLAGS = '-mcpu=cortex-m4 -fmessage-length=0 -fno-common -fsigned-char -ffunction-sections -fdata-sections -ffreestanding -fno-move-loop-invariants -Wall -std=c99'.split(' ')
     conf.env.CFLAGS += str('-DBUILD_VERSION=\"' + str(VERSION) + '\"').split(' ')
     conf.env.CFLAGS += str('-DBUILD_APPNAME=\"' + str(APPNAME) + '\"').split(' ')
     conf.env.CFLAGS += '-DDEBUG -DUSE_FULL_ASSERT -DTRACE -DOS_USE_TRACE_ITM -DUSE_HAL_DRIVER -DHSE_VALUE=8000000'.split(' ')
@@ -448,6 +448,7 @@ def chksum_function(conf):
     proc_chksum = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
         stderr=subprocess.PIPE, shell=True)
     std_out, std_err = proc_chksum.communicate()
+    print 'stdout: {0}\nstderr: {1}'.format(std_out, std_err)
     checksum = (((std_out.split('* 32-bit SW-Chksum:     ')[1]).split('*'))[0].strip())
     print 'checksum output:\n----------------\n', std_out
     print 'Err:', std_err, '\n'
