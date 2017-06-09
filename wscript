@@ -433,7 +433,6 @@ def chksum_function(conf):
     """
     # Calculate checksum and write it back into foxbms.hex file
     tgt = os.path.join('src', 'general', os.path.normpath(HEX_FILE))
-    print "sadasdasd", OUT
     if PRIMARY:
         tgt = os.path.join('foxBMS-primary', tgt)
     if SECONDARY:
@@ -447,10 +446,17 @@ def chksum_function(conf):
         foxbms.hex\n' + COLOR_C + cmd + COLOR_N + '\n'
     proc_chksum = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
         stderr=subprocess.PIPE, shell=True)
+    rtn_code = proc_chksum.returncode
     std_out, std_err = proc_chksum.communicate()
+    if rtn_code == 0 or rtn_code == None:
+        print "Success: Process return code from tool %s code: %s" % (tool, str(rtn_code))
+    else:
+        print "Error: Process return code from tool %s code: %s" % (tool, str(rtn_code))
+        sys.exit(1)
     checksum = (((std_out.split('* 32-bit SW-Chksum:     ')[1]).split('*'))[0].strip())
     print 'checksum output:\n----------------\n', std_out
-    print 'Err:', std_err, '\n'
+    if std_err:
+        print 'Err:', std_err, '\n'
 
     # write checksum into foxbms.elf file
     tgt = os.path.join('src', 'general', os.path.normpath(ELF_FILE))
@@ -467,13 +473,15 @@ def chksum_function(conf):
     print 'gdb output:\n-----------'
     proc_write_to_elf = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
         stderr=subprocess.PIPE, shell=True)
+    rtn_code = proc_write_to_elf.returncode
     std_out, std_err = proc_write_to_elf.communicate()
-    for entry in [std_out, std_err]:
-        try:
-            print entry
-        except NameError as err:
-            print "err: ", err
-            sys.exit()
+    if rtn_code == 0 or rtn_code == None:
+        print std_out
+        print "Success: Process return code from tool %s code: %s" % (tool, str(rtn_code))
+    else:
+        print std_err
+        print "Error: Process return code from tool %s code: %s" % (tool, str(rtn_code))
+        #sys.exit(1)
 
     # write checksum into <APPNAME>_flashheader.bin file
     SRC = tgt
@@ -490,13 +498,15 @@ def chksum_function(conf):
     print 'objcopy output:\n---------------'
     proc_write_to_bin = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
         stderr=subprocess.PIPE, shell=True)
+    rtn_code = proc_write_to_bin.returncode
     std_out, std_err = proc_write_to_bin.communicate()
-    for entry in [std_out, std_err]:
-        try:
-            print entry
-        except NameError as err:
-            print "err: ", err
-            sys.exit()
+    if rtn_code == 0 or rtn_code == None:
+        print std_out
+        print "Success: Process return code from tool %s code: %s" % (tool, str(rtn_code))
+    else:
+        print std_err
+        print "Error: Process return code from tool %s code: %s" % (tool, str(rtn_code))
+        sys.exit(1)
 
 @TaskGen.feature('chksum')
 @TaskGen.after('hexgen')
