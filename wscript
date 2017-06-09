@@ -108,7 +108,7 @@ if SPHINX:
 out = os.path.join(TOP_BUILD_DIR, SUB_BUILD_DIR)
 OUT = out # !DO NOT DELETE! - NEEDED FOR CHKSUM TASK
 
-VERSION = "0.4"
+VERSION = "0.5.0"
 APPNAME = "foxbms"
 VENDOR  = "Fraunhofer IISB"
 
