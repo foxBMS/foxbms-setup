@@ -16,18 +16,27 @@
 #
 # &Prime;This product is derived from foxBMS&reg;&Prime;
 
+"""
+@file       bootstrap.py
+@date       05.05.2017 (date of creation)
+@author     foxBMS Team
+@ingroup    tools
+@prefix     none
+@brief      clean wrapper for waf
+
+Helper script for setting up a foxBMS project
+"""
+
 import os
 import sys
 import subprocess
 import argparse
 import posixpath
+import logging
 
 sys.dont_write_bytecode = True
 
 import build
-import logging
-
-
 
 PRINT_MARK = "----------------------------------------------------------------------------"
 BARE_EXTENSION = ".git"
@@ -88,13 +97,31 @@ def clone_or_pull_repo(repo_name, repo_path):
             cloned/pulled.
     """
     if os.path.isdir(repo_name):
-        logging.info("Pulling foxBMS repository \"%s\" from remote %s" % (repo_name, repo_path))
+        logging.info("Pulling foxBMS repository \"%s\" from remote %s" % \
+            (repo_name, repo_path))
         cmd = "git pull"
-        subprocess.call(cmd, cwd=repo_name, shell=True)
+        rtn_code = subprocess.call(cmd, cwd=repo_name, shell=True)
+        if rtn_code == 0 or rtn_code == None:
+            print "Success: Process return code of \'git\' is \'%s\'" \
+                % (str(rtn_code))
+        else:
+            print "Error: Process return code of \'git\' is \'%s\'" \
+                % (str(rtn_code))
+            print "Exiting..."
+            sys.exit(1)
     else:
-        logging.info(" Cloning foxBMS repository \"%s\" from remote %s" % (repo_name, repo_path))
+        logging.info(" Cloning foxBMS repository \"%s\" from remote %s" % \
+            (repo_name, repo_path))
         cmd = "git clone %s" % (repo_path)
-        subprocess.call(cmd, shell=True)
+        rtn_code = subprocess.call(cmd, shell=True)
+        if rtn_code == 0 or rtn_code == None:
+            print "Success: Process return code of \'git\' is \'%s\'" \
+                % (str(rtn_code))
+        else:
+            print "Error: Process return code of \'git\' is \'%s\'" \
+                % (str(rtn_code))
+            print "Exiting..."
+            sys.exit(1)
 
 def setup_repo_class(repo_names, repo_paths, setup_info):
     """Helper function for nicer output while cloning/pulling the repositories
@@ -102,7 +129,7 @@ def setup_repo_class(repo_names, repo_paths, setup_info):
     Args:
         repo_names (list): names of the repositories that will be setup.
         repo_paths (list): paths to the repositories that will be setup.
-        setup_info (string): Initial information that will be printed 
+        setup_info (string): Initial information that will be printed
     """
     logging.info("\nSetting up the foxBMS %s dependencies" %(setup_info))
     logging.info(PRINT_MARK)

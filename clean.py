@@ -1,24 +1,61 @@
-"""Helper script for cleaning binaries and documentation of foxBMS
+# @copyright &copy; 2010 - 2017, Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V. All rights reserved.
+#
+# BSD 3-Clause License
+# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+# 1.  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+# 2.  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+# 3.  Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# We kindly request you to use one or more of the following phrases to refer to foxBMS in your hardware, software, documentation or advertising materials:
+#
+# &Prime;This product uses parts of foxBMS&reg;&Prime;
+#
+# &Prime;This product includes parts of foxBMS&reg;&Prime;
+#
+# &Prime;This product is derived from foxBMS&reg;&Prime;
+
 """
+@file       clean.py
+@date       05.05.2017 (date of creation)
+@author     foxBMS Team
+@ingroup    tools
+@prefix     none
+@brief      clean wrapper for waf
+
+Helper script for cleaning binaries and documentation of foxBMS
+"""
+
 import os
 import sys
 import subprocess
 import argparse
+import logging
 
 sys.dont_write_bytecode = True
 
-TOOLCHAIN_BASIC_CONFIGURE = 'python ' + os.path.join('foxBMS-tools',
+TOOLCHAIN_BASIC_CONFIGURE = sys.executable + ' ' + os.path.join('foxBMS-tools',
         'waf-1.8.12') + ' configure'
 
 def clean_prcoess(cmd, supress_output=False):
+    logging.debug(cmd)
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
         stderr=subprocess.PIPE, shell=True)
     out, err = proc.communicate()
+    rtn_code = proc.returncode
+
     if supress_output is False:
         if out:
-            print out
+            logging.info(out)
         if err:
-            print err
+            logging.error(err)
+
+    if rtn_code == 0 or rtn_code == None:
+        print "Success: Process return code %s" % (str(rtn_code))
+    else:
+        print "Error: Process return code %s" % (str(rtn_code))
+        sys.exit(1)
 
 def clean(mcu_switch=None, supress_output=False):
     cmd = TOOLCHAIN_BASIC_CONFIGURE +  " "
@@ -50,8 +87,8 @@ def main(cmd_line_args):
                 mcu_switch = "-s"
             clean(mcu_switch)
 if __name__ == '__main__':
-    HELP_TEXT = """This script cleans the software and documentation repositories
-based on the specified commands."""
+    HELP_TEXT = """This script cleans the software and documentation 
+repositories based on the specified commands."""
     parser = argparse.ArgumentParser(description=HELP_TEXT, \
         formatter_class=argparse.RawTextHelpFormatter, add_help=True)
     opt_args = parser.add_argument_group('optional arguments:')
