@@ -38,6 +38,9 @@ sys.dont_write_bytecode = True
 
 import build
 
+SW_VERSION = "release-0.5.x"
+HW_VERSION = "release-1.0.x"
+
 PRINT_MARK = "----------------------------------------------------------------------------"
 BARE_EXTENSION = ".git"
 """string: Extension of bare git repository.
@@ -96,10 +99,14 @@ def clone_or_pull_repo(repo_name, repo_path):
         repo_path (string): Repository path from where the repository is
             cloned/pulled.
     """
+    if "hardware" in repo_name:
+        version = HW_VERSION
+    else:
+        version = SW_VERSION
     if os.path.isdir(repo_name):
         logging.info("Pulling foxBMS repository \"%s\" from remote %s" % \
             (repo_name, repo_path))
-        cmd = "git pull"
+        cmd = "git pull %s %s " % (repo_path, version)
         rtn_code = subprocess.call(cmd, cwd=repo_name, shell=True)
         if rtn_code == 0 or rtn_code == None:
             print "Success: Process return code of \'git\' is \'%s\'" \
@@ -112,7 +119,7 @@ def clone_or_pull_repo(repo_name, repo_path):
     else:
         logging.info(" Cloning foxBMS repository \"%s\" from remote %s" % \
             (repo_name, repo_path))
-        cmd = "git clone %s" % (repo_path)
+        cmd = "git clone %s --branch %s" % (repo_path, version)
         rtn_code = subprocess.call(cmd, shell=True)
         if rtn_code == 0 or rtn_code == None:
             print "Success: Process return code of \'git\' is \'%s\'" \
