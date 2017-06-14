@@ -90,6 +90,8 @@ def main(cmd_line_args):
                 build(mcu_switch, cmd_line_args.doxygen)
             else:
                 build(mcu_switch)
+    else:
+        print "Add argument -h or --help for instructions"
 if __name__ == '__main__':
     HELP_TEXT = """This script builds the software and documentation
 repositories based on the specified commands."""
