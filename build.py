@@ -33,16 +33,25 @@ import subprocess
 import argparse
 import logging
 
+
 sys.dont_write_bytecode = True
 
-TOOLCHAIN_BASIC_CONFIGURE = sys.executable + ' ' + os.path.join('foxBMS-tools',
-        'waf-1.8.12') + ' ' + 'configure'
+TOOLCHAIN_BASIC_CONFIGURE = sys.executable + ' ' + \
+    os.path.join('foxBMS-tools', 'waf-1.9.13') + ' ' + 'configure'
 TOOLCHAIN_GCC_CHECK = "--check-c-compiler=gcc"
 
+
 def build_process(cmd, supress_output=False):
+    """Starts the build process by passing the command string to the
+    command line
+
+    Args:
+        cmd (string): command for the build process.
+        supress_output (bool): Indicates if logging is active for the build .
+    """
     logging.debug(cmd)
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
-        stderr=subprocess.PIPE, shell=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
     out, err = proc.communicate()
     rtn_code = proc.returncode
 
@@ -52,14 +61,26 @@ def build_process(cmd, supress_output=False):
         if err:
             logging.error(err)
 
-    if rtn_code == 0 or rtn_code == None:
-        print "Success: Process return code %s" % (str(rtn_code))
+    if rtn_code == 0 or rtn_code is None:
+        logging.info("Success: Process return code %s", str(rtn_code))
     else:
-        print "Error: Process return code %s" % (str(rtn_code))
+        logging.error("Error: Process return code %s", str(rtn_code))
         sys.exit(1)
 
+
 def build(mcu_switch=None, doxygen=False, supress_output=False):
-    cmd = TOOLCHAIN_BASIC_CONFIGURE +  " "
+    """Creates the build command string for the specified build and passes the
+    build command string to `build_process` which actually starts the build
+    process.
+
+    Args:
+        mcu_switch (string): specifies what will be built.
+        doxygen (bool): specifies if the doxygen documentation to a mcu should
+            be built.
+        supress_output (bool): indicates if the output should appear on the
+            command line.
+    """
+    cmd = TOOLCHAIN_BASIC_CONFIGURE + " "
     if mcu_switch is None:
         cmd += "sphinx"
     elif mcu_switch == "-p" or mcu_switch == "-s":
@@ -67,11 +88,21 @@ def build(mcu_switch=None, doxygen=False, supress_output=False):
         if doxygen is True:
             cmd += " " + "doxygen"
     else:
-        logging.error("Invalid build argument: \"%s\"" % (mcu_switch))
-        sys.exit()
+        logging.error("Invalid build argument: \"%s\"", mcu_switch)
+        sys.exit(1)
     build_process(cmd, supress_output)
 
+def styleguide(mcu_switch, supress_output=False):
+    cmd = "%s %s styleguide_function" % (TOOLCHAIN_BASIC_CONFIGURE, mcu_switch)
+    build_process(cmd, supress_output=False)
+
 def main(cmd_line_args):
+    """Based on the input form command line the specified build string is
+    passed to the `build` function.
+
+    Args:
+        cmd_line_args (Namespace): command line arguments
+    """
     if cmd_line_args.all:
         build()
         build(mcu_switch='-p')
@@ -81,33 +112,49 @@ def main(cmd_line_args):
     elif cmd_line_args.sphinx:
         build()
     elif (cmd_line_args.primary and not cmd_line_args.secondary) or \
-        (not cmd_line_args.primary and cmd_line_args.secondary):
-            if cmd_line_args.primary:
-                mcu_switch = "-p"
-            if cmd_line_args.secondary:
-                mcu_switch = "-s"
-            if cmd_line_args.doxygen:
-                build(mcu_switch, cmd_line_args.doxygen)
-            else:
-                build(mcu_switch)
+            (not cmd_line_args.primary and cmd_line_args.secondary):
+        if cmd_line_args.primary:
+            mcu_switch = "-p"
+        if cmd_line_args.secondary:
+            mcu_switch = "-s"
+
+        if cmd_line_args.doxygen:
+            build(mcu_switch, cmd_line_args.doxygen)
+        elif cmd_line_args.styleguide:
+            styleguide(mcu_switch)
+        else:
+            build(mcu_switch)
+
 if __name__ == '__main__':
     HELP_TEXT = """This script builds the software and documentation
 repositories based on the specified commands."""
-    parser = argparse.ArgumentParser(description=HELP_TEXT, \
-        formatter_class=argparse.RawTextHelpFormatter, add_help=True)
+    parser = argparse.ArgumentParser(
+        description=HELP_TEXT,
+        formatter_class=argparse.RawTextHelpFormatter,
+        add_help=True)
     opt_args = parser.add_argument_group('optional arguments:')
-    opt_args.add_argument('-sphi', '--sphinx', action='store_true', \
-        required=False, help='builds sphinx documenation')
-    opt_args.add_argument('-p', '--primary', action='store_true', \
-        required=False, help='builds primary binaries')
-    opt_args.add_argument('-s', '--secondary', action='store_true', \
-        required=False, help='builds secondary binaries')
-    opt_args.add_argument('-dox', '--doxygen', action='store_true', \
-        required=False, help='builds the software documentation for the specified mcu (-p, -s)')
-    opt_args.add_argument('-a', '--all', action='store_true', \
-        required=False, help='generates all of the above mentioned')
-    opt_args.add_argument('-v', '--verbose', action='store_true', \
-        required=False, help='show diagnostic output')
+    opt_args.add_argument('-sphi', '--sphinx', action='store_true',
+                          required=False, help='builds sphinx documenation')
+    opt_args.add_argument('-p', '--primary', action='store_true',
+                          required=False, help='builds primary binaries')
+    opt_args.add_argument('-s', '--secondary', action='store_true',
+                          required=False, help='builds secondary binaries')
+    opt_args.add_argument(
+        '-dox',
+        '--doxygen',
+        action='store_true',
+        required=False,
+        help='builds the software documentation for the specified mcu (-p, -s)')
+    opt_args.add_argument(
+        '-a',
+        '--all',
+        action='store_true',
+        required=False,
+        help='generates all of the above mentioned')
+    opt_args.add_argument('-v', '--verbose', action='store_true',
+                          required=False, help='show diagnostic output')
+    opt_args.add_argument('-sg', '--styleguide', action='store_true',
+                          required=False, help='run styleguide function only')
     CMD_LINE_ARGS = parser.parse_args()
     if CMD_LINE_ARGS.verbose:
         logging.basicConfig(level=logging.DEBUG)
