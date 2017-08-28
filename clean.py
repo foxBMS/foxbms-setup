@@ -32,16 +32,17 @@ import sys
 import subprocess
 import argparse
 import logging
+import shutil
 
 sys.dont_write_bytecode = True
 
-TOOLCHAIN_BASIC_CONFIGURE = sys.executable + ' ' + os.path.join('foxBMS-tools',
-        'waf-1.8.12') + ' configure'
+TOOLCHAIN_BASIC_CONFIGURE = sys.executable + ' ' + \
+    os.path.join('foxBMS-tools', 'waf-1.9.13') + ' ' + 'configure'
 
 def clean_prcoess(cmd, supress_output=False):
     logging.debug(cmd)
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
-        stderr=subprocess.PIPE, shell=True)
+        stderr=subprocess.PIPE)
     out, err = proc.communicate()
     rtn_code = proc.returncode
 
@@ -61,10 +62,10 @@ def clean(mcu_switch=None, supress_output=False):
     cmd = TOOLCHAIN_BASIC_CONFIGURE +  " "
     if mcu_switch is None:
         sphinx_build_dir = os.path.join("build", "sphinx")
-        if sys.platform.startswith('win'):
-            cmd = "del /s /q" + " " + sphinx_build_dir
+        if os.path.isdir(sphinx_build_dir):
+            shutil.rmtree(sphinx_build_dir)
         else:
-            cmd = "find " + sphinx_build_dir + " -f -type f -delete"
+            print "Nothing to clean..."
     elif mcu_switch == "-p" or mcu_switch == "-s":
         cmd += " " + mcu_switch + " " + "clean"
     else:
