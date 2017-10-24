@@ -15,10 +15,10 @@ the MCUs (e.g., Python, git, GCC).
 The starting point to get foxBMS is the foxBMS-setup
 repository (https://github.com/foxBMS/foxBMS-setup), which contains
 the general setup files for the foxBMS project. It includes a setup script
-(bootstrap.py) which clones all the other needed repositories. The needed 
+(bootstrap.py) which clones all the other needed repositories. The needed
 documentation will be generated automatically after these repositories have been
-cloned. The generated documentation is found in the directory ./build. 
-After the bootstrap step, the top project directory (foxBMS-setup) structure 
+cloned. The generated documentation is found in the directory ./build.
+After the bootstrap step, the top project directory (foxBMS-setup) structure
 looks like this:
 
  - foxBMS-setup <dir>
@@ -41,7 +41,7 @@ looks like this:
   - wscript <file>
 
 * Directories and files with starting full stop are hidden in Windows in default
-configuration. 
+configuration.
 
 There is a help available by running "python bootstrap.py -h".
 
