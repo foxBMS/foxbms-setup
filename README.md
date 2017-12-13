@@ -18,7 +18,7 @@ The starting point to get foxBMS is the foxBMS-setup repository (https://github.
    - mcu-secondary <dir>
    - mcu-common <dir>
    - mcu-freertos <dir>
-  - hal <dir>
+   - mcu-hal <dir>
   - tools <dir>
   - .gitignore <file> *
   - .config.yaml <file> *
