@@ -1,14 +1,32 @@
-# @copyright &copy; 2010 - 2017, Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V. All rights reserved.
+# @copyright &copy; 2010 - 2017, Fraunhofer-Gesellschaft zur Foerderung der
+#   angewandten Forschung e.V. All rights reserved.
 #
 # BSD 3-Clause License
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-# 1.  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-# 2.  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-# 3.  Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1.  Redistributions of source code must retain the above copyright notice,
+#     this list of conditions and the following disclaimer.
+# 2.  Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+# 3.  Neither the name of the copyright holder nor the names of its
+#     contributors may be used to endorse or promote products derived from this
+#     software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
-# We kindly request you to use one or more of the following phrases to refer to foxBMS in your hardware, software, documentation or advertising materials:
+# We kindly request you to use one or more of the following phrases to refer to
+# foxBMS in your hardware, software, documentation or advertising materials:
 #
 # &Prime;This product uses parts of foxBMS&reg;&Prime;
 #
@@ -22,44 +40,64 @@
 @author     foxBMS Team
 @ingroup    tools
 @prefix     none
-@brief      clean wrapper for waf
+@brief      bootstrapper for foxBMS projects
 
 Helper script for setting up a foxBMS project
 """
 
-import os
-import sys
-import subprocess
 import argparse
 import logging
+import os
 import posixpath
-
+import subprocess
+import sys
+import yaml
 sys.dont_write_bytecode = True
-# "import build" after "sys.dont_write_bytecode = True" since otherwise
-# bytecode would be written.
 import build
+# 'import build' after 'sys.dont_write_bytecode = True' since otherwise
+# bytecode would be written.
 
-SW_VERSION = "release-0.5.x"
-HW_VERSION = "release-1.0.x"
+__version__ = 1.0
+__date__ = '2017-11-29'
+__updated__ = '2017-12-06'
 
-PRINT_MARK = "----------------------------------------------------------------------------"
-BARE_EXTENSION = ".git"
+FOXBMSVERSION = 'latest'
+
+GIT_PROGRAM = 'git'
+GIT_CLONE = 'clone'
+
+PRINT_MARK = '----------------------------------------------------------------------------'
+BARE_EXTENSION = '.git'
 """string: Extension of bare git repository.
 """
-FOXBMS_APPLICATION_REPOS = ["foxBMS-documentation", "foxBMS-hardware",
-                            "foxBMS-primary", "foxBMS-secondary"]
-"""list: Repository that are needed for foxBMS application development.
-"""
-DEVEL_REPOS = [
-    "foxBMS-bootloader",
-    "foxBMS-can-bootloader",
-    "foxBMS-flashtool"]
-"""list: Repository that are needed for additional development.
-"""
-DEPENDENCY_REPOS = ["hal", "FreeRTOS", "foxBMS-tools"]
-"""list: Generally needed repository that are needed to work with foxBMS hard-
-and software.
-"""
+
+
+def read_yaml(foxconf='.config.yaml'):
+    """
+    Returns:
+        repos (list): List of repositories to be cloned. The list is
+            structured like this:
+            [ [{{repo names, ...}}, {{name of die directory to be}},
+                {{some printable information about the repository}}], {{next}} ]
+    """
+    with open(foxconf, 'r') as stream:
+        try:
+            conf = yaml.load(stream)
+        except yaml.YAMLError as exc:
+            logging.error(exc)
+
+    repos = []
+    for key in conf:
+        repo_info = key
+        bootstrap_path = '.'
+        if key != '.':
+            if not os.path.isdir(key):
+                os.mkdir(key)
+            bootstrap_path = key
+        else:
+            repo_info = 'general'
+        repos.append([conf[key], bootstrap_path, repo_info])
+    return repos
 
 
 def get_main_git_path():
@@ -73,14 +111,14 @@ def get_main_git_path():
             'git config --get remote.origin.url'.split(' '))
     except subprocess.CalledProcessError as err:
         setup_dir_path = os.path.dirname(os.path.realpath(__file__))
-        err_msg = """
-\"%s\" is not a git repository.
+        err_msg = '''
+\'{}\' is not a git repository.
 Did you download a .zip file from GitHub?
 
 Use
     \'git clone https://github.com/foxBMS/foxBMS-setup\'
 to download the foxBMS-setup repository.
-        """ % (setup_dir_path)
+        '''.format(setup_dir_path)
         logging.error(err_msg)
         sys.exit(1)
     repository_basepath, repository_name = repository_basepath.rsplit('/', 1)
@@ -95,6 +133,7 @@ def set_git_paths(repository_basepath, repos):
             repository names.
         repos (string): names of the repositories to which their absolute path
             should be generated.
+
     Returns:
         list: All repositories with their absolute path.
     """
@@ -109,72 +148,108 @@ def print_next_steps_info(repo):
     Args:
         repo (string): Repository that is setup.
     """
-    logging.info(" Setting up \"%s\" repository", repo)
+    logging.info(' Setting up \'%s\' repository', repo)
+
 
 def check_subprocess_exit(program, rtn_code):
     if rtn_code == 0 or rtn_code is None:
-        logging.info("Success: Process return code of \'%s\' is \'%s\'",
-                          program, str(rtn_code))
+        logging.info('Success: Process return code of \'%s\' is \'%s\'',
+                     program, str(rtn_code))
     else:
-        logging.error("Error: Process return code of \'%s\' is \'%s\'",
-                       program, str(rtn_code))
-        logging.error("Exiting...")
+        logging.error('Error: Process return code of \'%s\' is \'%s\'',
+                      program, str(rtn_code))
+        logging.error('Exiting...')
         sys.exit(1)
 
-def clone_or_pull_repo(repo_name, repo_path):
-    """Clones or pulls specified repository, depending if it already exists or
-    not.
+
+def clone_repo(repo_name, repo_path, repo_target_path):
+    """Clones a specified repository
+
+    - We clone the master branch
+    - We check which branch contains the tag 'latest'
+    - We checkout this branch
 
     Args:
-        repo_name (string): Repository name that is cloned/pulled.
+        repo_name (string): Repository name that is cloned.
         repo_path (string): Repository path from where the repository is
-            cloned/pulled.
+            cloned.
     """
-    if "hardware" in repo_name:
-        version = HW_VERSION
-    elif "primary" in repo_name or "secondary" in repo_name \
-        or "tools" in repo_name or "documentation" in repo_name:
-        version = SW_VERSION
+    version = 'master'  # fallback, as master always exists
+    latest_tag_missing = True
+    for _rep in ['hw', 'mcu', 'tools', 'documentation']:
+        if _rep in repo_name:
+            version = FOXBMSVERSION
+
+    if os.path.isdir(os.path.join(repo_target_path, repo_name)):
+        logging.error('repository \'{}\' already exists'.format(repo_name))
+        pass  # we might still setup other repos
     else:
-        version = SW_VERSION
-    program = "git"
-    if os.path.isdir(repo_name):
-        logging.info("Pulling foxBMS repository \"%s\" from remote %s",
+        # repository does not exist locally, therefore we clone
+        logging.info('Cloning foxBMS repository \'%s\' from remote %s',
                      repo_name, repo_path)
-        cmd = "%s pull %s %s" % (program, repo_path, version)
-        logging.info("%s", cmd)
-        rtn_code = subprocess.call(cmd, cwd=repo_name)
-    else:
-        logging.info("Cloning foxBMS repository \"%s\" from remote %s",
-                     repo_name, repo_path)
-        cmd = "%s clone %s --branch %s" % (program, repo_path, version)
-        logging.info("%s", cmd)
-        rtn_code = subprocess.call(cmd)
-    check_subprocess_exit(program, rtn_code)
+        _action = GIT_CLONE
+        _cwd = os.path.join(repo_target_path)
+        # first we clone the master
+        _cmd = '{} {} {}'.format(GIT_PROGRAM, _action, repo_path).strip()
+        logging.info('%s', _cmd)
+        rtn_code = subprocess.call(_cmd, cwd=_cwd)
+        check_subprocess_exit(GIT_PROGRAM, rtn_code)
+        # We start the search for the 'latest' tag and checkout the resulting
+        # branch
+        _cwd = os.path.join(repo_target_path, repo_name)
+        logging.info('Searching tag \'%s\'', version)
+        _cmd = '{} branch --all --contains {}'.format(GIT_PROGRAM, version).strip()
+        logging.info('%s', _cmd)
+        a = subprocess.Popen(_cmd, cwd=_cwd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        _out, _err = a.communicate()
+        latest_branch = 'master'
+        try:
+            _out = _out.replace('*', '')
+            _out = _out.strip()
+            _out = _out.replace(' ', '')
+            for line in _out.split('\n'):
+                if latest_tag_missing is True:
+                    b = line.split('/')[-1]
+                    if b != '':
+                        latest_branch = b
+                        latest_tag_missing = False
+                        logging.info('Found tag \'%s\' in \'%s\'', version, latest_branch)
+        except IndexError as ierr:
+            logging.warning('The tag \'%s\' might not exist.', version)
+            logging.warning('Using \'master\' branch instead.')
+        except BaseException:
+            logging.error('Something undefined went wrong.')
+            logging.warning('Using \'master\' branch instead.')
+        if latest_tag_missing is True:
+            logging.warning('The tag \'%s\' might not exist.', version)
+            logging.warning('Using \'master\' branch instead.')
+
+        _cmd = '{} checkout {}'.format(GIT_PROGRAM, latest_branch).strip()
+        logging.info('%s', _cmd)
+        rtn_code = subprocess.call(_cmd, cwd=_cwd, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        check_subprocess_exit(GIT_PROGRAM, rtn_code)
+        print '\n'
 
 
-def setup_repo_class(repo_names, repo_paths, setup_info):
-    """Helper function for nicer output while cloning/pulling the repositories
+def setup_repo_class(repo_names, repo_paths, repo_target_path, setup_info):
+    """Helper function for nicer output while cloning/fetching the repositories
 
     Args:
         repo_names (list): names of the repositories that will be setup.
         repo_paths (list): paths to the repositories that will be setup.
         setup_info (string): Initial information that will be printed
     """
-    logging.info("\nSetting up the foxBMS %s dependencies", setup_info)
+    logging.info('\nSetting up the foxBMS %s dependencies', setup_info)
     logging.info(PRINT_MARK)
     for repo in repo_names:
         print_next_steps_info(repo)
     logging.info(PRINT_MARK)
     for repo, repo_path in zip(repo_names, repo_paths):
-        clone_or_pull_repo(repo, repo_path)
-    logging.info("done...\n")
+        clone_repo(repo, repo_path, repo_target_path)
+    logging.info('done...\n')
 
-def update():
-    program = "git"
-    cmd = "%s pull" % (program)
-    rtn_code = subprocess.call(cmd)
-    check_subprocess_exit(program, rtn_code)
 
 def main(cmd_line_args):
     """Description of t main setup process
@@ -186,6 +261,13 @@ def main(cmd_line_args):
     Args:
         cmd_line_args (Namespace): Arguments passed by the command line
     """
+    if cmd_line_args.verbosity == 1:
+        logging.basicConfig(level=logging.INFO)
+    elif cmd_line_args.verbosity > 1:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.WARNING)
+
     if cmd_line_args.specfiy_software_branch:
         global SW_VERSION
         SW_VERSION = cmd_line_args.specfiy_software_branch
@@ -194,85 +276,63 @@ def main(cmd_line_args):
         HW_VERSION = cmd_line_args.specfiy_hardware_branch
 
     repository_basepath, setup_repo_name = get_main_git_path()
-    if cmd_line_args.update:
-        update()
-        logging.info("\nSuccessfully updated %s", setup_repo_name)
-        logging.info("Run \'%s\' again to update the other repositories", __file__)
-        sys.exit(0)
-    dependency_repos_abspath = set_git_paths(
-        repository_basepath, DEPENDENCY_REPOS)
-    if cmd_line_args.specfiy_repos:
-        specified_repos = cmd_line_args.specfiy_repos
-        specified_repos_abspath = set_git_paths(
-            repository_basepath, cmd_line_args.specfiy_repos)
-    else:
-        foxbms_application_repos_abspath = set_git_paths(
-            repository_basepath, FOXBMS_APPLICATION_REPOS)
-    devel_repos_abspath = set_git_paths(repository_basepath, DEVEL_REPOS)
 
     logging.info(PRINT_MARK)
-    logging.info("Setting up the foxBMS project in directory")
+    logging.info('Setting up the foxBMS project in directory')
     logging.info(os.path.dirname(os.path.realpath(__file__)))
     logging.info(PRINT_MARK)
 
     # setup general software dependency repositories
-    info = "general software"
-    setup_repo_class(DEPENDENCY_REPOS, dependency_repos_abspath, info)
+    repo_list = read_yaml()
+    for repos in repo_list:
+        yaml_repos_abspath = set_git_paths(repository_basepath, repos[0])
+        setup_repo_class(repos[0], yaml_repos_abspath, repos[1], repos[2])
 
-    # setup foxBMS application development repositories
     if cmd_line_args.specfiy_repos:
-        info = "specified repositories"
+        info = 'specified repositories'
         setup_repo_class(specified_repos, specified_repos_abspath, info)
-    else:
-        info = "application development software"
-        setup_repo_class(
-            FOXBMS_APPLICATION_REPOS,
-            foxbms_application_repos_abspath,
-            info)
-
-    # setup development tools
-    if cmd_line_args.development_repos:
-        info = "additional development software"
-        setup_repo_class(DEVEL_REPOS, devel_repos_abspath, info)
 
     if not cmd_line_args.dont_build_documentation:
-        # create documentation
         logging.info(PRINT_MARK)
-        logging.info("Create foxBMS Documentation")
+        logging.info('Create foxBMS Documentation')
         logging.info(PRINT_MARK)
-        logging.info("Create Sphinx Documentation")
+        logging.info('Create Sphinx Documentation')
         build.build(supress_output=True)
         logging.info(PRINT_MARK)
-        logging.info("Create Primary MCU Doxygen Documentation")
+        logging.info('Create Primary MCU Doxygen Documentation')
         build.build('-p', doxygen=True, supress_output=True)
         logging.info(PRINT_MARK)
-        logging.info("Create Secondary MCU Doxygen Documentation")
+        logging.info('Create Secondary MCU Doxygen Documentation')
         build.build('-s', doxygen=True, supress_output=True)
         logging.info(PRINT_MARK)
-        logging.info("done...")
+        logging.info('done...')
+
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
-    HELP_TEXT = """Setup helper of foxBMS"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(message)s',
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    HELP_TEXT = '''Setup helper of foxBMS'''
     parser = argparse.ArgumentParser(description=HELP_TEXT, add_help=True)
     opt_args = parser.add_argument_group('optional arguments:')
-    opt_args.add_argument('-u', '--update', action='store_true',
-                          required=False, help='If specified, the setup \
-        repository will be updated')
     opt_args.add_argument('-sr', '--specfiy-repos', nargs='+', type=str,
                           required=False, help='Only the specified repository \
-                          will be cloned/pulled')
+                          will be cloned/fetched')
     opt_args.add_argument('-sb', '--specfiy-software-branch', type=str,
                           required=False, help='Only the specified repository \
-                          will be cloned/pulled')
+                          will be cloned/fetched')
     opt_args.add_argument('-hb', '--specfiy-hardware-branch', type=str,
                           required=False, help='Only the specified repository \
-                          will be cloned/pulled')
+                          will be cloned/fetched')
     opt_args.add_argument('-dbd', '--dont-build-documentation',
                           action='store_true', required=False, help='If specified the \
             documenation will not be build after the checkout process')
-    opt_args.add_argument('-dev', '--development-repos', action='store_true',
-                          required=False, help='If specified, additional development repositories \
-        will be cloned/pulled')
+    parser.add_argument(
+        '--verbosity',
+        '-v',
+        action='count',
+        default=0,
+        help='increase output verbosity')
     CMD_LINE_ARGS = parser.parse_args()
     main(CMD_LINE_ARGS)

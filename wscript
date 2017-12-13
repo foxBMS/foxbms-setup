@@ -16,8 +16,7 @@
 #
 # &Prime;This product is derived from foxBMS&reg;&Prime;
 
-"""Top dir WAF script
-"""
+
 import os
 import sys
 import re
@@ -26,10 +25,15 @@ import json
 import platform
 import subprocess
 import ConfigParser
+import logging
 
 from waflib import Logs, Utils, Context, Options
 from waflib import Task, TaskGen
 from waflib.Tools.compiler_c import c_compiler
+
+__version__ = 0.1
+__date__ = '2017-11-29'
+__updated__ = '2017-11-29'
 
 # console colors
 COLOR_P = '\x1b[35m'  # pink
@@ -47,32 +51,31 @@ SPHINX = False
 #   - TODO
 if (len(sys.argv) == 2) and ('configure' in sys.argv):
     print "Configure project needs at least one more argument."
-    sys.exit()
+    sys.exit(1)
 elif (len(sys.argv) > 3) and 'sphinx' in sys.argv and 'clean' not in sys.argv:
-    print r"Build sphinx documentation by \"pyhton \
-        foxBMS-tools\waf-1.9.13 configure sphinx\""
-    sys.exit()
+    print r"Build sphinx documentation by \"python tools\waf-1.9.13 configure sphinx\""
+    sys.exit(1)
 else:
     if ('-p' in sys.argv and '-s' in sys.argv) or \
-        ('-p' in sys.argv and '-b' in sys.argv) or \
-            ('-s' in sys.argv and '-b' in sys.argv):
+       ('-p' in sys.argv and '-b' in sys.argv) or \
+       ('-s' in sys.argv and '-b' in sys.argv):
         print "Specify one mcu (option: -p, -s, -b), not a \
             combination of these parameters."
-        sys.exit()
+        sys.exit(1)
     if ('chksum_function' in sys.argv) and not (
             '-p' in sys.argv or '-s' in sys.argv or '-b' in sys.argv):
-        print "Specfify a project to run the chksum tool on"
-        sys.exit()
+        print "Specify a project to run the chksum tool on"
+        sys.exit(1)
     if ('size_function' in sys.argv) and not (
             '-p' in sys.argv or '-s' in sys.argv or '-b' in sys.argv):
-        print "Specfify a project to run the size tool on"
-        sys.exit()
+        print "Specify a project to run the size tool on"
+        sys.exit(1)
     if ('doxygen' in sys.argv) and not (
             '-p' in sys.argv or '-s' in sys.argv or '-b' in sys.argv):
-        print "Specfify a project to generate the doxygen \
+        print "Specify a project to generate the Doxygen \
             documentation for"
-        sys.exit()
-    # all wrong input combinations should now be handeld. The task
+        sys.exit(1)
+    # all wrong input combinations should now be handled. The task
     # of the build is now unambiguose defined.
     if '-p' in sys.argv:
         PRIMARY = True
@@ -83,11 +86,11 @@ else:
     elif 'sphinx' in sys.argv:
         SPHINX = True
     else:
-        print "Specify the mcu (option: -p, -s) to build the socures \
-            or doxygen documentation"
-        sys.exit()
+        print "Specify the mcu (option: -p, -s) to build the sources \
+            or Doxygen documentation"
+        sys.exit(1)
 
-# The top output dir is always './build/' relative to the directory
+# The top output directory is always './build/' relative to the directory
 # the foxBMS-setup was configured in.
 # Set sub build directory and build option as now the project goal
 # is defined
@@ -95,21 +98,34 @@ TOP_BUILD_DIR = 'build'
 if PRIMARY:
     BLD_OPTION = '-p'
     SUB_BUILD_DIR = 'primary'
-if SECONDARY:
+    APPNAME = "foxbms"
+    VERSION = "1.0"
+    CHKSUM_INI_FILE_REL_PATH = os.path.join(
+        "tools", "checksum", "chksum.ini")
+elif SECONDARY:
     BLD_OPTION = '-s'
     SUB_BUILD_DIR = 'secondary'
-if BOOTLOADER:
+    APPNAME = "foxbms"
+    VERSION = "1.0"
+    CHKSUM_INI_FILE_REL_PATH = os.path.join(
+        "tools", "checksum", "chksum.ini")
+elif BOOTLOADER:
     BLD_OPTION = '-b'
     SUB_BUILD_DIR = 'bootloader'
-if SPHINX:
+    APPNAME = "bootloader"
+    VERSION = "V0.2.0"
+    CHKSUM_INI_FILE_REL_PATH = os.path.join(
+        "tools", "checksum", "chksum-bootloader.ini")
+elif SPHINX:
     BLD_OPTION = 'sphinx'
     SUB_BUILD_DIR = 'sphinx'
+    APPNAME = "foxbms"
+    VERSION = "1.0"
+    CHKSUM_INI_FILE_REL_PATH = ""
 
 out = os.path.join(TOP_BUILD_DIR, SUB_BUILD_DIR)
 OUT = out  # !DO NOT DELETE! - NEEDED FOR CHKSUM TASK
 
-VERSION = "0.5"
-APPNAME = "foxbms"
 VENDOR = "Fraunhofer IISB"
 
 CONFIG_HEADER = APPNAME + 'config.h'
@@ -118,21 +134,13 @@ HEX_FILE = os.path.join(APPNAME + '.hex')
 BIN_FLASH = os.path.join(APPNAME + '_flash.bin')
 BIN_FLASH_HEADER = os.path.join(APPNAME + '_flashheader.bin')
 
-WAF_REL_PATH = os.path.join("foxBMS-tools", "waf-1.9.13")
-DOC_TOOL_DIR = os.path.join("foxBMS-tools", "waftools")
-CHKSUM_SCRIPT_REL_PATH = os.path.join("foxBMS-tools", "checksum", "chksum.py")
-CHKSUM_INI_FILE_REL_PATH = os.path.join(
-    "foxBMS-tools", "checksum", "chksum.ini")
-STYLEGUIDE_SCRIPT_REL_PATH = os.path.join(
-    "foxBMS-tools", "styleguide", "cpplint.py")
+DOC_TOOL_DIR = os.path.join("tools", "waftools")
 
-SPHINX_DOC_DIR = os.path.join("foxBMS-documentation", "doc", "sphinx")
-DOXYGEN_DOC_DIR = os.path.join("foxBMS-documentation", "doc", "doxygen")
+SPHINX_DOC_DIR = os.path.join("documentation", "doc", "sphinx")
+DOXYGEN_DOC_DIR = os.path.join("documentation", "doc", "doxygen")
 
 
 def options(opt):
-    """Options that can be passed to waf
-    """
     opt.load('compiler_c')
     opt.load(['doxygen', 'sphinx_build'], tooldir=DOC_TOOL_DIR)
     opt.add_option('-c', '--config', action='store', default=None,
@@ -152,8 +160,6 @@ def options(opt):
 
 
 def load_config_file():
-    """Loads the configuration file if existing
-    """
     _fname = Options.options.configfile
     if _fname is None:
         return
@@ -161,15 +167,6 @@ def load_config_file():
 
 
 def configure(conf):
-    """Waf function "configure"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 configure"
-
-    Configures waf for building the sources and the documentation.
-    After "configure" and the waf-lock files are generated, one is
-    able to run "python foxBMS-tools/waf-1.9.13 build" or "python
-    foxBMS-tools/waf-1.9.13 chksum" without calling "python
-    foxBMS-tools/waf-1.9.13 configure" first.
-    """
     load_config_file()
     # prefix for all gcc related tools
     pref = 'arm-none-eabi'
@@ -178,10 +175,11 @@ def configure(conf):
 
         conf.env.CC = pref + '-gcc.exe'
         conf.env.AR = pref + '-ar.exe'
-        conf.find_program(pref + '-strip', var='STRIP')
         conf.env.LINK_CC = pref + '-g++.exe'
-        conf.find_program(pref + '-objcopy', var='hexgen')
+        conf.find_program(pref + '-strip', var='STRIP')
+        conf.find_program(pref + '-objcopy', var='OBJCOPY')
         conf.find_program(pref + '-size', var='SIZE')
+        conf.find_program(pref + '-gdb', var='GDB')
         conf.find_program('python', var='PYTHON')
         conf.find_program('dot', var='dot')
     else:
@@ -189,12 +187,15 @@ def configure(conf):
         conf.env.AR = pref + '-ar'
         conf.env.LINK_CC = pref + '-g++'
         conf.find_program(pref + '-strip', var='STRIP')
-        conf.find_program(pref + '-objcopy', var='hexgen')
+        conf.find_program(pref + '-objcopy', var='OBJCOPY')
         conf.find_program(pref + '-size', var='SIZE')
+        conf.find_program(pref + '-gdb', var='GDB')
         conf.find_program('python', var='PYTHON')
         conf.find_program('dot', var='dot')
     conf.env.CFLAGS = '-mcpu=cortex-m4 -mthumb -mlittle-endian -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -fmessage-length=0 -fno-common -fsigned-char -ffunction-sections -fdata-sections -ffreestanding -fno-move-loop-invariants -Wall -std=c99'.split(
         ' ')
+    # change for STM32F7 CPU
+    # conf.env.CFLAGS = '-mcpu=cortex-m7 -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv5-sp-d16 -fmessage-length=0 -fno-common -fsigned-char -ffunction-sections -fdata-sections -ffreestanding -fno-move-loop-invariants -Wall -std=c99'.split(' ')
     conf.env.CFLAGS += str('-DBUILD_VERSION=\"' +
                            str(VERSION) + '\"').split(' ')
     conf.env.CFLAGS += str('-DBUILD_APPNAME=\"' +
@@ -203,6 +204,42 @@ def configure(conf):
         ' ')
     for key in c_compiler:  # force only using gcc
         c_compiler[key] = ['gcc']
+        
+
+    # get HAL version based on compiler define
+    try:
+        stm32f_version = filter(lambda x: '-mcpu' in x, conf.env.CFLAGS)[0]
+    except IndexError as e:
+        print "Error: %s " % (e)
+        print "Could not find \"-mcpu\" in compiler flags"
+        sys.exit(1)
+    cdef, cpu = stm32f_version.split('=')
+    if cpu == "cortex-m4":
+        conf.env.CPU_MAJOR = 'STM32F4xx'
+    elif cpu == "cortex-m7":
+        conf.env.CPU_MAJOR = 'STM32F7xx'
+    else:
+        print "\"%s\" is not a valid cpu version" % (cpu)
+        sys.exit(1)
+
+    # get floating point version based on compiler define and check
+    # if compatible with cpu
+    try:
+        floating_point_unit_version = filter(lambda x: '-mfpu' in x, conf.env.CFLAGS)[0]
+    except IndexError as e:
+        print "Error: %s " % (e)
+        print "Could not find \"-mcpu\" in compiler flags"
+        sys.exit(1)
+    cdef, floating_point_version = floating_point_unit_version.split('=')
+    if cpu == "cortex-m4":
+        if floating_point_version != 'fpv4-sp-d16':
+            print "Error: floating point unit flag not compatible with cpu"
+            sys.exit(1)
+    if cpu == 'cortex-m7':
+        if floating_point_version != 'fpv5-sp-d16':
+            print "Error: floating point unit flag not compatible with cpu"
+            sys.exit(1)
+    # check done
     conf.load('compiler_c')
     conf.load(['doxygen', 'sphinx_build'])
     conf.find_program('git', mandatory=False)
@@ -210,22 +247,31 @@ def configure(conf):
     conf.env.version = VERSION
     conf.env.appname = APPNAME
     conf.env.vendor = VENDOR
-
+    
+    if conf.env.CPU_MAJOR == "STM32F4xx":
+        conf.define('STM32F429xx', 1)
+        LDSCRIPT_FILENAME = "STM32F429ZIT6_FLASH.ld"
+    elif conf.env.CPU_MAJOR == "STM32F7xx":
+        conf.define('STM32F767xx', 1)
+        LDSCRIPT_FILENAME = "STM32F767IGTx_EXTRAM.ld"
     if PRIMARY:
         LDSCRIPT = os.path.join(
-            "foxBMS-primary",
+            'embedded-software',
+            "mcu-primary",
             "src",
-            "STM32F429ZIT6_FLASH.ld")
+            LDSCRIPT_FILENAME)
     elif SECONDARY:
         LDSCRIPT = os.path.join(
-            "foxBMS-secondary",
+            'embedded-software',
+            "mcu-secondary",
             "src",
-            "STM32F429ZIT6_FLASH.ld")
+            LDSCRIPT_FILENAME)
     elif BOOTLOADER:
         LDSCRIPT = os.path.join(
-            "foxBMS-bootloader",
+            'embedded-software',
+            "mcu-bootloader",
             "src",
-            "STM32F429ZIT6_FLASH.ld")
+            LDSCRIPT_FILENAME)
     else:
         LDSCRIPT = ""
 
@@ -249,7 +295,6 @@ def configure(conf):
     conf.define('BUILD_LDSCRIPT', conf.env.ldscript)
     conf.define('BUILD_NUMBER', conf.env.buildno)
     conf.define('TOOLCHAIN_WAF_ENABLED', 1)
-    conf.define('STM32F429xx', 1)
     conf.define('USE_DRIVER_HAL', 1)
     conf.define('INCLUDE_eTaskGetState', 1)
     conf.env.target = conf.options.target
@@ -296,35 +341,7 @@ def configure(conf):
         print '\nno CFLAGS specified'
 
 
-def cleanall(conf):
-    """cleans all binary files
-    """
-    removed_files = 0
-    if os.path.isdir(out):
-        for root, directories, filenames in os.walk(out):
-            clean_file_extensions = ['.a', '.o', '.h', '.elf', '.bin']
-            to_clean_files = ''
-            for ext in clean_file_extensions:
-                to_clean_files += '\\' + ext + '|'
-            to_clean_files = to_clean_files[:-1]
-            del_regex = re.compile(to_clean_files)
-            for filename in filenames:
-                file_path = os.path.join(root, filename)
-                if del_regex.match(os.path.splitext(file_path)[1]):
-                    os.remove(file_path)
-                    removed_files += 1
-    print COLOR_P + 'successfully cleaned all ', clean_file_extensions, \
-        'files (', removed_files, ' files removed).' + COLOR_N
-    print 'run "waf configure" first, to be able to build again.'
-
 def build(bld):
-    """Waf function "rem"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 build"
-
-    A wscript with a function "build" must exists in every sub-directory that
-    is built. The build instructions for the sub-directories have to be
-    specified in the wscripts in the subdirectories.
-    """
     import sys
     import logging
     from waflib import Logs
@@ -332,22 +349,124 @@ def build(bld):
     log_file_extentsion = '.log'
     log_file = 'build.log'
     src_file_build = False
-    # enables logging for build routine
+    # Sets the source directory of the project and enables the build logging
+    # routine
+    bld.env.__sw_dir = os.path.normpath('embedded-software')
+    bld.env.__bld_common = os.path.normpath('mcu-common')
+    bld.env.__inc_FreeRTOS = ' '.join([
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-freertos', 'Source'),
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-freertos', 'Source', 'CMSIS_RTOS'),
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-freertos', 'Source', 'include'),
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-freertos', 'Source', 'portable', 'GCC', 'ARM_CM4F'),
+        ])
+    bld.env.__inc_hal = ' '.join([
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-hal', 'CMSIS', 'Device', 'ST', bld.env.CPU_MAJOR, 'Include'),
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-hal', 'CMSIS', 'Include'),
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-hal', bld.env.CPU_MAJOR + '_HAL_Driver', 'Inc'),
+        os.path.join(bld.top_dir, bld.env.__sw_dir, 'mcu-hal', bld.env.CPU_MAJOR + '_HAL_Driver', 'Inc', 'Legacy'),
+        ])
     if bld.options.primary:
-        bld_recurse_directory = os.path.normpath('foxBMS-primary')
+        __src_dir = os.path.normpath('mcu-primary')
+        bld.env.__bld_project = __src_dir
         log_file_name = 'primary'
-        src_file_build = True
     elif bld.options.secondary:
-        bld_recurse_directory = os.path.normpath('foxBMS-secondary')
+        __src_dir = os.path.normpath('mcu-secondary')
+        bld.env.__bld_project = __src_dir
         log_file_name = 'secondary'
-        src_file_build = True
     elif bld.options.bootloader:
-        bld_recurse_directory = os.path.normpath('foxBMS-bootloader')
+        __src_dir = os.path.normpath('mcu-bootloader')
+        bld.env.__bld_project = __src_dir
         log_file_name = 'bootloader'
-        src_file_build = True
     else:
-        log_file_name = 'default'
-    if src_file_build:
+        logging.error('No valid target specified')
+        sys.exit(1)
+
+    log_file = log_file_prefix + '_' + log_file_name + log_file_extentsion
+    log_file = os.path.join(TOP_BUILD_DIR, log_file)
+    bld.logger = Logs.make_logger(log_file, out)
+    hdlr = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(message)s')
+    hdlr.setFormatter(formatter)
+    bld.logger.addHandler(hdlr)
+    bld.recurse(os.path.join(bld.env.__sw_dir, __src_dir))
+    bld.add_post_fun(size)
+
+def size(bld):
+    print 'Running: \'arm-none-eabi-size --format=berkley\' on all binaries.'
+    objlist = []
+    for _ext in ['.elf', '.a', '.o']:
+        for root, dirs, files in os.walk(bld.out_dir):
+            for file in files:
+                if file.endswith(_ext):
+                    bpath = os.path.join(root, file)
+                    objlist.append(os.path.join(bpath))
+    _out = '\n'
+    for _file in objlist:
+        cmd = 'arm-none-eabi-size --format=berkley ' + _file
+        proc_get_size = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE, shell=True)
+        _std_out, _std_err = proc_get_size.communicate()
+        rtn_code = proc_get_size.returncode
+        _out += '{}\n'.format(cmd)
+        if _std_out:
+            _out += '\n {}'.format(_std_out)
+        if _std_err:
+            _out += '\n {}'.format(_std_err)
+    size_log_file = os.path.join(bld.out_dir, 'size.log')
+    with open(size_log_file, 'w') as f:
+        f.write(_out)
+
+
+def dist(conf):
+    conf.base_name = 'foxbms'
+    conf.algo = 'tar.gz'
+    conf.excl = ' Packages workspace **/.waf-1* **/*~ **/*.pyc **/*.swp **/.lock-w* **/env.txt **/log.txt **/.git **/build **/*.tar.gz **/.gitignore **/tools/waf-1.9.13-*'
+
+
+class chksum(Task.Task):
+    chksum_script = os.path.abspath(os.path.join('tools', 'checksum', 'chksum.py'))
+    writeback_script = os.path.abspath(os.path.join('tools', 'checksum', 'writeback.py'))
+    mcu_config_file = os.path.abspath(CHKSUM_INI_FILE_REL_PATH)
+    cs_out_dir = 'chk5um'
+    cs_out_file = os.path.join(cs_out_dir, 'chksum.log')
+    always_run = True
+    calculate_checksum = 'python ' + chksum_script + ' ' + mcu_config_file + ' -bd=' + cs_out_dir + ' -hf=${SRC[0].relpath().replace(\".elf\",\".hex\")}'
+    writeback_command = '${PYTHON} ' + writeback_script + ' --conffile ' +  cs_out_file + ' --elffile ${SRC[0].relpath()} --tool ${GDB}'
+    run_str = (calculate_checksum, writeback_command)
+    color = 'RED'
+
+@TaskGen.feature('chksum')
+@TaskGen.before('bingen')
+@TaskGen.after('apply_link', 'hexgen')
+def add_chksum_task(self):
+    try:
+        link_task = self.link_task
+    except AttributeError:
+        return
+    self.create_task('chksum', src=link_task.outputs[0])
+
+
+def doxygen(bld):
+    import sys
+    import logging
+    from waflib import Logs
+    if bld.env.DOXYGEN:
+        _docbuilddir = os.path.normpath(bld.bldnode.abspath())
+        if not os.path.exists(_docbuilddir):
+            os.makedirs(_docbuilddir)
+        if bld.options.primary:
+            doxygenconf = os.path.join(DOXYGEN_DOC_DIR, 'doxygen-p.conf')
+            d = "primary"
+        elif bld.options.secondary:
+            doxygenconf = os.path.join(DOXYGEN_DOC_DIR, 'doxygen-s.conf')
+            d = "secondary"
+        elif bld.options.bootloader:
+            doxygenconf = os.path.join(DOXYGEN_DOC_DIR, 'doxygen-bootloader.conf')
+            d = "bootloader"
+        log_file_prefix = 'doc'
+        log_file_extentsion = '.log'
+        log_file = 'build.log'
+        log_file_name = 'doxygen_' + d
         log_file = log_file_prefix + '_' + log_file_name + log_file_extentsion
         log_file = os.path.join(TOP_BUILD_DIR, log_file)
         bld.logger = Logs.make_logger(log_file, out)
@@ -355,373 +474,28 @@ def build(bld):
         formatter = logging.Formatter('%(message)s')
         hdlr.setFormatter(formatter)
         bld.logger.addHandler(hdlr)
-        bld.recurse(bld_recurse_directory)
-
-
-def dist(conf):
-    """Waf function "dist"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 dist"
-
-    Packs the current status of the project in a tar.gz file
-    """
-    conf.base_name = 'foxbms'
-    conf.algo = 'tar.gz'
-    conf.excl = ' Packages workspace **/.waf-1* **/*~ **/*.pyc **/*.swp **/.lock-w* **/env.txt **/log.txt **/.git **/build **/*.tar.gz **/.gitignore **/tools/waf-1.9.13-*'
-
-
-# START CHKSUM TASK DESCRIPTION
-class chksum(Task.Task):
-    """Waf function "size"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 size"
-
-    Calculates the size of all libraries the foxbms.elf file.
-
-    Gets all object files in the build directory (by file extension *.o) and the main foxbms.elf binary and processes
-    the object with size in berkley format.
-    """
-    cmd = os.path.join(os.getcwd(), WAF_REL_PATH)
-    _temp = ''
-    if not SPHINX:
-        if PRIMARY:
-            _temp = '-p'
-        elif SECONDARY:
-            _temp = '-s'
-        elif BOOTLOADER:
-            _temp = '-b'
-        run_str = '${PYTHON} ' + cmd + ' chksum_function ' + _temp
-        color = 'CYAN'
-
-
-def chksum_function(conf):
-    """Waf function "chksum"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 chksum"
-
-    Calculates the checksum of HEX_FILE generated by the build process.
-    This process needs to be called after "build".
-    Calls the checksum with tool stored in
-    foxBMS-tools/checksum/chksum.py with the configuration stored in
-    foxBMS-tools/checksum/chksum.ini.
-
-    Reads the returned checksum from the piped shell output.
-    Writes the checksum back to the following files:
-     - foxbms.hex,
-     - foxbms.elf and
-     - foxbms_flashheader.bin.
-    """
-    # Calculate checksum and write it back into foxbms.hex file
-    tgt = os.path.join('src', 'general', os.path.normpath(HEX_FILE))
-    if PRIMARY:
-        tgt = os.path.join('foxBMS-primary', tgt)
-    if SECONDARY:
-        tgt = os.path.join('foxBMS-secondary', tgt)
-
-    tgt = os.path.join(OUT, tgt)
-    tool = 'python'
-    cmd = ' '.join([tool, CHKSUM_SCRIPT_REL_PATH, CHKSUM_INI_FILE_REL_PATH,
-                    '-bd=' + OUT, '-hf=' + tgt])
-    print COLOR_P + 'Subprocess: Calculating checksum from \
-        foxbms.hex\n' + COLOR_C + cmd + COLOR_N + '\n'
-    proc_chksum = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, shell=True)
-    rtn_code = proc_chksum.returncode
-    std_out, std_err = proc_chksum.communicate()
-    if rtn_code == 0 or rtn_code is None:
-        print "Success: Process return code from tool %s code: %s" % (tool, str(rtn_code))
-    else:
-        print "Error: Process return code from tool %s code: %s" % (tool, str(rtn_code))
-        sys.exit(1)
-    checksum = (
-        ((std_out.split('* 32-bit SW-Chksum:     ')[1]).split('*'))[0].strip())
-    print 'checksum output:\n----------------\n', std_out
-    if std_err:
-        print 'Err:', std_err, '\n'
-
-    # write checksum into foxbms.elf file
-    tgt = os.path.join('src', 'general', os.path.normpath(ELF_FILE))
-    if PRIMARY:
-        tgt = os.path.join('foxBMS-primary', tgt)
-    if SECONDARY:
-        tgt = os.path.join('foxBMS-secondary', tgt)
-    tgt = os.path.join(OUT, tgt)
-
-    tool = 'arm-none-eabi-gdb'
-    cmd = '%s -q -se=%s --write -ex="set var ver_sw_validation.Checksum_u32 =%s" \
-        -ex="print ver_sw_validation.Checksum_u32" -ex="quit"' % (tool, tgt, checksum)
-    print COLOR_P + 'Subprocess: Writing into foxbms.elf\n' + COLOR_C + cmd + COLOR_N + '\n'
-    print 'gdb output:\n-----------'
-    proc_write_to_elf = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE, shell=True)
-    rtn_code = proc_write_to_elf.returncode
-    std_out, std_err = proc_write_to_elf.communicate()
-    if rtn_code == 0 or rtn_code is None:
-        print std_out
-        print "Success: Process return code from tool %s code: %s" % (tool, str(rtn_code))
-    else:
-        print std_err
-        print "Error: Process return code from tool %s code: %s" % (tool, str(rtn_code))
-        # sys.exit(1)
-
-    # write checksum into <APPNAME>_flashheader.bin file
-    SRC = tgt
-    tgt = os.path.join('src', 'general', os.path.normpath(BIN_FLASH_HEADER))
-    if PRIMARY:
-        tgt = os.path.join('foxBMS-primary', tgt)
-    if SECONDARY:
-        tgt = os.path.join('foxBMS-secondary', tgt)
-    tgt = os.path.join(OUT, tgt)
-    tool = 'arm-none-eabi-objcopy -v'
-    cmd = ' '.join([tool, '-j', '.flashheader', '-O', 'binary', SRC, tgt])
-    print '\n' + COLOR_P + 'Subprocess: Writing into \
-        foxbms_flashheader.bin\n' + COLOR_C + cmd + COLOR_N + '\n'
-    print 'objcopy output:\n---------------'
-    proc_write_to_bin = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE, shell=True)
-    rtn_code = proc_write_to_bin.returncode
-    std_out, std_err = proc_write_to_bin.communicate()
-    if rtn_code == 0 or rtn_code is None:
-        print std_out
-        print "Success: Process return code from tool %s code: %s" % (tool, str(rtn_code))
-    else:
-        print std_err
-        print "Error: Process return code from tool %s code: %s" % (tool, str(rtn_code))
-        sys.exit(1)
-
-
-@TaskGen.feature('chksum')
-@TaskGen.after('hexgen')
-def add_chksum_task(self):
-    """Adds the chksum task as waf feature to the build process. This
-    step is applied after hex file generation.
-    """
-    try:
-        link_task = self.link_task
-    except AttributeError:
-        return
-    self.create_task('chksum', link_task.outputs[0])
-# END CHKSUM TASK DESCRIPTION
-
-
-def flash(bld):
-    """Waf function "flash"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 flash"
-    """
-    subprocess.call(
-        "python tools/flashtool/stm32_loader.py -p COM10 -e -w -v -a 0x08000000 " +
-        bld.path.abspath() +
-        ("/build/src/general/foxbms_flash.bin"),
-        shell=True)
-    subprocess.call(
-        "python tools/flashtool/stm32_loader.py -p COM10 -w -v -a 0x080FFF00 " +
-        bld.path.abspath() +
-        ("/build/src/general/foxbms_flashheader.bin"),
-        shell=True)
-
-
-# START STYLEGUIDE TASK DESCRIPTION
-class styleguide(Task.Task):
-    """Waf function "size"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 size"
-
-    Calculates the size of all libraries the foxbms.elf file.
-
-    Gets all object files in the build directory (by file extension *.o) and the main foxbms.elf binary and processes
-    the object with size in berkley format.
-    """
-    cmd = os.path.join(os.getcwd(), WAF_REL_PATH)
-    _temp = ''
-    if not SPHINX:
-        if PRIMARY:
-            _temp = '-p'
-        elif SECONDARY:
-            _temp = '-s'
-        elif BOOTLOADER:
-            _temp = '-b'
-        run_str = '${PYTHON} ' + cmd + ' styleguide_function ' + _temp
-        color = 'CYAN'
-
-def styleguide_function(conf):
-    import logging
-    """Waf function "styleguide"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 styleguide"
-
-    Checks  *.c *.h files of the foxBMS project located in src/
-    The output of the styleguide is put into build/styleguide.log
-    """
-    timestamp_iso_format = datetime.datetime.now().isoformat()
-    timestamp_iso_format = timestamp_iso_format.replace(":","-")
-    timestamp_iso_format = timestamp_iso_format.replace(".","-")
-    if conf.options.primary:
-        lint_directory = os.path.normpath('foxBMS-primary')
-        log_file_prefix = "primary"
-    elif conf.options.secondary:
-        lint_directory = os.path.normpath('foxBMS-secondary')
-        log_file_prefix = "secondary"
-    log_file = log_file_prefix + '_' + "styleguide.log"
-    log_file = os.path.join(TOP_BUILD_DIR, log_file)
-    format = ""
-    logging.basicConfig(filename=log_file, level=logging.DEBUG, filemode='w',format=format)
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    logging.getLogger('').addHandler(console)
-    lint_directory = os.path.join(lint_directory, 'src')
-    logging.debug("Styleguide parsing all files with a git diff" )
-    logging.debug("--------------------------------------------\n" )
-    cmd = "git ls-files -m"
-    logging.debug("cmd: %s\n" %cmd)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        cwd=lint_directory)
-    out, err = p.communicate()
-    if sys.platform.startswith('win'):
-        out.replace('\r', '\r\n')
-        err.replace('\r', '\r\n')
-    rtn_code = p.returncode
-    if rtn_code == 0 or rtn_code == None:
-        logging.debug("Files with diff:\n%s" %out)
-        logging.debug("Success: Process return code of \'git\' is \'%s\'\n",
-            str(rtn_code))
-    else:
-        logging.debug("Error: Process return code of \'git\' is \'%s\'",
-            str(rtn_code))
-        logging.debug("Error: %s", err)
-        logging.debug("Exiting...")
-        sys.exit(1)
-    if out == "":
-        return
-
-    lint_files = out.split('\n')
-    lint_files = filter(None, lint_files)
-    lint_files = [os.path.normpath(os.path.join(lint_directory,e)) for e in lint_files if e.endswith((".c", ".h"))]
-    # TODO: do not lint files third party files
-
-    tool = "python"
-    logging.debug("CPPLINT")
-    logging.debug("------")
-    for file in lint_files:
-        base_path, file_name = os.path.split(file)
-        STYLEGUIDE_SCRIPT_ABS_PATH = os.path.join(os.getcwd(), STYLEGUIDE_SCRIPT_REL_PATH)
-        cmd = ' '.join([tool, STYLEGUIDE_SCRIPT_ABS_PATH, '--extensions=c,h --linelength=120', file_name])
-        logging.debug("cmd: %s\n", cmd)
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=base_path)
-        out, err = p.communicate()
-        logging.debug(err)
-        logging.debug(out)
-        logging.debug("------\n")
-
-@TaskGen.feature('styleguide')
-@TaskGen.after('size')
-def add_styleguide_task(self):
-    """Adds the styleguide task as waf feature to the build process. This
-    step is applied after hex file generation.
-    """
-    try:
-        link_task = self.link_task
-    except AttributeError:
-        return
-    self.create_task('styleguide', link_task.outputs[0])
-# END CHKSUM TASK DESCRIPTION
-
-
-def doxygen(bld):
-    """Waf function "doxygen"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 doxygen"
-
-    Builds the sphinx documentation defined in src/. For configuration
-    (e.g., exlcuded files) see doc/doxygen/doxygen.conf.
-    """
-    if bld.env.DOXYGEN:
-        _docbuilddir = os.path.normpath(bld.bldnode.abspath())
-        if not os.path.exists(_docbuilddir):
-            os.makedirs(_docbuilddir)
-        if bld.options.primary:
-            doxygenconf = os.path.join(DOXYGEN_DOC_DIR, 'doxygen-p.conf')
-        if bld.options.secondary:
-            doxygenconf = os.path.join(DOXYGEN_DOC_DIR, 'doxygen-s.conf')
         bld(features="doxygen", doxyfile=doxygenconf)
 
 
 def sphinx(bld):
-    """Waf function "sphinx"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 sphinx"
-
-    Builds the sphinx documentation defined in doc/sphinx.
-    For configuration see doc/sphinx/conf.py.
-    """
+    import sys
+    import logging
+    from waflib import Logs
+    log_file_prefix = 'doc'
+    log_file_extentsion = '.log'
+    log_file = 'build.log'
+    log_file_name = 'sphinx'
+    log_file = log_file_prefix + '_' + log_file_name + log_file_extentsion
+    log_file = os.path.join(TOP_BUILD_DIR, log_file)
+    bld.logger = Logs.make_logger(log_file, out)
+    hdlr = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(message)s')
+    hdlr.setFormatter(formatter)
+    bld.logger.addHandler(hdlr)
     bld.recurse(SPHINX_DOC_DIR)
-
-# START SIZE TASK DESCRIPTION
-
-
-class size(Task.Task):
-    """Waf function "size"
-    Invoked by: "python foxBMS-tools/waf-1.9.13 size"
-
-    Calculates the size of all libraries the foxbms.elf file.
-
-    Gets all object files in the build directory (by file extension
-    *.o) and the main foxbms.elf binary and processes the object with
-    size in berkley format.
-    """
-    cmd = os.path.join(os.getcwd(), WAF_REL_PATH)
-    _temp = ''
-    if PRIMARY:
-        _temp = '-p'
-    elif SECONDARY:
-        _temp = '-s'
-    elif BOOTLOADER:
-        _temp = '-b'
-    else:
-        _temp = ''
-    run_str = '${PYTHON} ' + cmd + ' size_function ' + _temp
-    color = 'CYAN'
-
-
-def size_function(conf):
-    """Runs a arm-none-eabi-size in Berkley format on all binaries.
-    """
-    objlist = ''
-    for root, dirs, files in os.walk(out):
-        for file in files:
-            if file.endswith('.elf'):
-                bpath = os.path.join(root, file)
-                objlist += " " + os.path.join(bpath)
-    for root, dirs, files in os.walk(os.path.join(out)):
-        for file in files:
-            if file.endswith('.a'):
-                bpath = os.path.join(root, file)
-                objlist += " " + os.path.join(bpath)
-    for root, dirs, files in os.walk(os.path.join(out)):
-        for file in files:
-            if file.endswith('.o'):
-                bpath = os.path.join(root, file)
-                objlist += " " + os.path.join(bpath)
-    size_log_file = os.path.join(out, 'size.log')
-    cmd = 'arm-none-eabi-size --format=berkley ' + objlist + ' > ' + \
-        size_log_file
-    print COLOR_C + cmd + COLOR_N
-    proc_get_size = subprocess.Popen(cmd, shell=True)
-    proc_get_size.wait()
-    with open(size_log_file, 'r') as f:
-        print f.read()
-
-
-@TaskGen.feature('size')
-@TaskGen.after('hexgen')
-def add_size_task(self):
-    """Adds the size task as waf feature to the build process. This
-    step is applied after hex file generation.
-    """
-    try:
-        link_task = self.link_task
-    except AttributeError:
-        return
-    self.create_task('size', link_task.outputs[0])
-# END SIZE TASK DESCRIPTION
 
 
 class strip(Task.Task):
-    """Task generation: waf instructions for running
-    arm-none-eabi-strip during release build
-    """
     run_str = '${STRIP} ${SRC}'
     color = 'BLUE'
 
@@ -729,9 +503,6 @@ class strip(Task.Task):
 @TaskGen.feature('strip')
 @TaskGen.after('apply_link')
 def add_strip_task(self):
-    """Adds the strip task as waf feature to the build process. This
-    step is applied after binary link.
-    """
     try:
         link_task = self.link_task
     except AttributeError:
@@ -740,73 +511,45 @@ def add_strip_task(self):
 
 
 class hexgen(Task.Task):
-    """Task generation: waf instructions for generating the
-    *.hex file
-    """
-    tgt = os.path.join('src', 'general', os.path.normpath(HEX_FILE))
-    if PRIMARY:
-        tgt = os.path.join('foxBMS-primary', tgt)
-    if SECONDARY:
-        tgt = os.path.join('foxBMS-secondary', tgt)
-    run_str = '${hexgen} -O ihex ${SRC} '
-    run_str += tgt
+    always_run = True
+    run_str = '${OBJCOPY} -O ihex ${SRC} ${TGT}'
     color = 'CYAN'
 
 
 @TaskGen.feature('hexgen')
 @TaskGen.after('apply_link')
 def add_hexgen_task(self):
-    """Adds the hexgen task as waf feature to the build process. This
-    step is applied after binary link. This is defined as the FIRST
-    after build step in src/general/wscript.
-    """
     try:
         link_task = self.link_task
     except AttributeError:
         return
-    self.create_task('hexgen', link_task.outputs[0])
+    self.create_task('hexgen', src=link_task.outputs[0], tgt=link_task.outputs[0].change_ext('.hex'))
 
 
 class binflashheadergen(Task.Task):
-    """Task generation: converts .elf to .bin
-    only flashheader
-    """
-    tgt = os.path.join('src', 'general', os.path.normpath(BIN_FLASH_HEADER))
-    if PRIMARY:
-        tgt = os.path.join('foxBMS-primary', tgt)
-    if SECONDARY:
-        tgt = os.path.join('foxBMS-secondary', tgt)
-    run_str = '${hexgen} -j .flashheader -O binary ${SRC} '
-    run_str += tgt
+    always_run = True
+    after = ['chksum']
+    run_str = '${OBJCOPY} -j .flashheader -O binary ${SRC} ${TGT}'
     color = 'RED'
 
 
 class binflashgen(Task.Task):
-    """Task generation: converts .elf to .bin
-    only flash
-    """
-    tgt = os.path.join('src', 'general', os.path.normpath(BIN_FLASH))
-    if PRIMARY:
-        tgt = os.path.join('foxBMS-primary', tgt)
-    if SECONDARY:
-        tgt = os.path.join('foxBMS-secondary', tgt)
-    run_str = '${hexgen} -R .bkp_ramsect -R .flashheader -O binary ${SRC} '
-    run_str += tgt
+    always_run = True
+    after = ['chksum']
+    run_str = '${OBJCOPY} -R .bkp_ramsect -R .flashheader -O binary ${SRC} ${TGT}'
     color = 'RED'
 
 
 @TaskGen.feature('bingen')
 @TaskGen.after('apply_link')
+@TaskGen.after('chksum')
 def add_bingen_task(self):
-    """Adds the bingen task as waf feature to the build process. This
-    step is applied after binary link.
-    """
     try:
         link_task = self.link_task
     except AttributeError:
         return
-    self.create_task('binflashgen', link_task.outputs[0])
-    self.create_task('binflashheadergen', link_task.outputs[0])
+    self.create_task('binflashgen', src=link_task.outputs[0], tgt=link_task.outputs[0].change_ext('_flash.bin'))
+    self.create_task('binflashheadergen', src=link_task.outputs[0], tgt=link_task.outputs[0].change_ext('_flashheader.bin'))
 
 
 import waflib.Tools.asm  # import before redefining
@@ -815,9 +558,6 @@ from waflib.TaskGen import extension
 
 @extension('.S')
 def asm_hook(self, node):
-    """ Task generation: waf instructions for startup script compile
-    routine
-    """
     name = 'Sasm'
     out = node.change_ext('.o')
     task = self.create_task(name, node, out)
@@ -829,10 +569,19 @@ def asm_hook(self, node):
 
 
 class Sasm(Task.Task):
-    """ Task generation: waf instructions for startup script compile
-    routine
-    """
     color = 'BLUE'
     run_str = '${CC} ${CFLAGS} ${CPPPATH_ST:INCPATHS} -DHSE_VALUE=8000000 -MMD -MP -MT${TGT} -c -x assembler -o ${TGT} ${SRC}'
+
+
+def check_subprocess(prg, rtn_code, std_out=None, std_err=None):
+    if rtn_code == 0:
+        if std_out:
+            print std_out
+        print 'Success: Process return code from program {} code: {}'.format(prg, str(rtn_code))
+    else:
+        if std_err:
+            print std_err
+        print 'Error: Process return code from program {} code: {}'.format(prg, str(rtn_code))
+        sys.exit(1)
 
 # vim: set ft=python :

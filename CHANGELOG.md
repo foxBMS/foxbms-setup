@@ -1,5 +1,12 @@
 # foxBMS Change Log
 
+## Release 1.0.0
+
+- renamed repository from ``foxBMS-setup`` to ``foxbms-setup``.
+- Removed update functionallity
+- Moved arm-none-eabi-size call as post function in build process
+- added a ``.config.yaml`` file which includes a list of repositories which are
+  boostrapped and their bootstrap location.
 
 ## Release 0.5.2
 
@@ -14,7 +21,7 @@ foxBMS-secondary\src\module\config\ltc_cfg.h by the define SLAVE_BOARD_VERSION.
  - Set SLAVE_BOARD_VERSION to "2" if you are using version 2.xx of the foxBMS
    Slave. Version 2.xx is the default configuration.
 
-Changelog :
+Changelog:
 - foxBMS-primary
   - fixed LTC temperature sensing bug
 - foxBMS-secondary

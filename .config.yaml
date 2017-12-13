@@ -1,0 +1,16 @@
+.:
+  - documentation
+  - tools
+
+embedded-software:
+  - mcu-common
+  - mcu-primary
+  - mcu-secondary
+  - mcu-freertos
+  - mcu-hal
+
+hardware:
+  - hw-master
+  - hw-extension
+  - hw-interface-ltc6820
+  - hw-slave-12-ltc6811-1

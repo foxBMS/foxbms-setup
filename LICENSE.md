@@ -13,11 +13,11 @@ We kindly request you to use one or more of the following phrases to refer to fo
 
 If you use foxBMS in your products, we encourage you to contact us at:
 
-CONTACT INFORMATION    
-Fraunhofer IISB    
-Schottkystrasse 10    
-91058 Erlangen, Germany    
-info@foxbms.org    
+CONTACT INFORMATION
+Fraunhofer IISB
+Schottkystrasse 10
+91058 Erlangen, Germany
+info@foxbms.org
 www.foxbms.org
 
 # foxBMS Software License
@@ -43,9 +43,9 @@ We kindly request you to use one or more of the following phrases to refer to fo
 
 If you use foxBMS in your products, we encourage you to contact us at:
 
-CONTACT INFORMATION    
-Fraunhofer IISB    
-Schottkystrasse 10    
-91058 Erlangen, Germany    
-info@foxbms.org    
+CONTACT INFORMATION
+Fraunhofer IISB
+Schottkystrasse 10
+91058 Erlangen, Germany
+info@foxbms.org
 www.foxbms.org
