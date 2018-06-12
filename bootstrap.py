@@ -1,4 +1,4 @@
-# @copyright &copy; 2010 - 2017, Fraunhofer-Gesellschaft zur Foerderung der
+# @copyright &copy; 2010 - 2018, Fraunhofer-Gesellschaft zur Foerderung der
 #   angewandten Forschung e.V. All rights reserved.
 #
 # BSD 3-Clause License
@@ -293,19 +293,8 @@ def main(cmd_line_args):
         setup_repo_class(specified_repos, specified_repos_abspath, info)
 
     if not cmd_line_args.dont_build_documentation:
-        logging.info(PRINT_MARK)
-        logging.info('Create foxBMS Documentation')
-        logging.info(PRINT_MARK)
-        logging.info('Create Sphinx Documentation')
-        build.build(supress_output=True)
-        logging.info(PRINT_MARK)
-        logging.info('Create Primary MCU Doxygen Documentation')
-        build.build('-p', doxygen=True, supress_output=True)
-        logging.info(PRINT_MARK)
-        logging.info('Create Secondary MCU Doxygen Documentation')
-        build.build('-s', doxygen=True, supress_output=True)
-        logging.info(PRINT_MARK)
-        logging.info('done...')
+        builders = ['--primary', '--secondary', '--doxygen', '--sphinx']
+        build.main(builders)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,11 @@
 # foxBMS Change Log
 
+## Release 1.1.0
+
+- updated build scripts
+- updated waf script
+- updated README.md
+
 ## Release 1.0.0
 
 - renamed repository from ``foxBMS-setup`` to ``foxbms-setup``.

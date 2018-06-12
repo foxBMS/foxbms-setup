@@ -25,3 +25,9 @@ waf-*-*
 
 # other
 *.zip
+*.gz
+*.bz2
+
+# ignore some git files
+*.patch
+*.diff
